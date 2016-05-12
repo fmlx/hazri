@@ -1,0 +1,130 @@
+<head>
+  <title>simple</title>
+  
+<SCRIPT TYPE="text/JavaScript">
+    function validateHhMm12(inputField) {
+	   if(inputField == null)
+	      return true;
+		  
+        var isValid = /^(0?[1-9]|1[012])(:[0-5]\d) [APap][mM]$/.test(inputField.value);
+
+        if (isValid) {
+            inputField.style.backgroundColor = '#bfa';
+        } else {
+            inputField.style.backgroundColor = '#fba';
+        }
+
+        return isValid;
+    }
+	
+	 function validateHhMm(inputField) {
+	    if(inputField == null)
+	      return true;
+		
+        var isValid = /^(0?[1-9]|1[012])(:[0-5]\d) $/.test(inputField.value);
+
+        if (isValid) {
+            inputField.style.backgroundColor = '#bfa';
+        } else {
+            inputField.style.backgroundColor = '#fba';
+        }
+
+        return isValid;
+    }
+</SCRIPT>
+<!-- <script type="text/javascript" src="../clock.js"></script> -->
+</head>
+
+
+<body>
+ <div class="container">
+<!--       <form class='new-task' id='login-form'>
+        <input type='text' name='username'>
+        <input type='password' name='password'>
+       <input type="submit" style="position: absolute; left: -9999px"/>
+    </form> -->
+	
+<!-- {{>loginModal}} -->
+<br>
+<h3 class="text-center">Hazri Sheet - Formulatrix</h3>
+  {{> loginButtons}}
+  
+   {{#if currentUser}}
+   <br>
+<!--    <div >
+<input type=button value="Previous" id="prev">
+	<h2 > {{selectedMonth}} - {{selectedYear}} </h2>
+<input type=button value="Next" id="next">
+</div> -->
+
+<div id="side_bar" class="clearfix">
+  <h2 style="float: left;left: -50%;" > {{selectedMonth}} - {{selectedYear}}</h2>
+  <button value="Next" id="next" class="btn btn-primary" style="float: right; position: relative; top: 10px; right: 10px;">Next</button>
+<button value="Previous" id="prev" class="btn btn-primary" style="float: right; position: relative; top: 10px; right: 12px;" >Previous</button>
+  </div>
+
+<br>
+	
+	<!-- <table class="table table-striped">
+	-->
+	<div class="table"> 
+		<p class="bg-success">
+			<div>Date</div>
+			<div></div>
+			<div>In</div>
+			<div>Out</div>
+			<div>Break</div>
+			<div>Worked</div>
+			
+		</p>	
+<!-- 		<thead> 
+			<tr>
+				<th>S</th>
+				<th>In</th>
+				<th>Out</th>
+				<th>Worked</th>
+				<th>S</th>
+				
+			</tr>
+		</thead>
+ -->		
+ <!-- <tbody>		 -->
+			{{#each getDaysInParticularMonth getSelectedDate}} 
+				{{>calendarRow}}
+		    {{/each}}
+		  <!-- </tbody> -->
+	  <!-- </table> -->
+	  </div>
+	  
+	  {{/if}}
+ </div>
+  
+</body>
+
+<template name="calendarRow">
+<!-- <div class="row row-striped"> -->
+<!-- <li> -->
+
+ <!-- <tr> -->
+  
+  <form class="new-task1 {{#if equals this.day 0}}gray{{/if}}  {{#if equals this.day 6}}gray{{/if}}">
+	<div><span class="text">{{this.dayname}}</span> </div>
+	<div><span class="text">{{this.date}}-{{this.month}}-{{this.year}}</span> </div>
+
+	<div><input id="clockpick" type="text"  name="In" placeholder="hh:mm am/pm" value="{{this.timeIn}}" onchange="validateHhMm12(this);"></div>
+	<div><input type="text" name="Out" placeholder="hh:mm am/pm" value="{{this.timeOut}}"  onchange="validateHhMm12(this);"/></div>
+	<div><input type="text" name="Break" placeholder="hh:mm" value="{{this.breakTime}}"  onchange="validateHhMm(this);"/></div>
+	<div><span class="text">{{this.timediff}} </span></div>
+	<div><input type="submit" style="position: absolute; left: -9999px"/> </div>
+  </form>
+<!-- </tr> -->
+
+ <!-- </li> -->
+ <!-- </div> -->
+</template>
+
+<template name="hello">
+  <button>Click Me</button>
+  <!--<p> {{getDaysInMonth}} </p> -->
+</template>
+

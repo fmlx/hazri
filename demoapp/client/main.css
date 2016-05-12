@@ -1,0 +1,13 @@
+/* CSS declarations go here */
+.table { display: table; } 
+.table>* { display: table-row; }
+.table>*>* { display: table-cell; }
+
+.rightalign {
+    position: relative;
+    right: 6px;   /* must be equal to parent's right padding */
+}
+
+.gray {
+  background: #C0C0C0;
+}
