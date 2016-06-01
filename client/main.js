@@ -148,8 +148,8 @@ Template.body.helpers({
            // console.log("Title of post "+ post.day);
        // });
 	   debugger;
-	    var weeklyHoursms = 0;
-         while (date.getMonth() === month-1) {
+	    var weeklyHoursms = 0, monthyHoursms = 0;
+	    while (date.getMonth() === month-1) {
 			  var cursor = Meteor.myFunctions.getTiming( Session.get("currentUser"), date.getDate(), date.getMonth()+1, date.getFullYear());
 		//	  var cursor = getTiming1();
 	//	debugger;
@@ -181,7 +181,10 @@ Template.body.helpers({
 				obj.remarks =  cursor[0].remarks; // may contain wfh timing or txt remark
 				
 				if(cursor[0].hrsworkedms != null)
-			    	weeklyHoursms += cursor[0].hrsworkedms;
+			    {
+					weeklyHoursms += cursor[0].hrsworkedms;
+					monthyHoursms += cursor[0].hrsworkedms;
+				}
 			}
 			
 			// to be displayed agains sunday. whole weeks, hours
@@ -197,7 +200,9 @@ Template.body.helpers({
             days.push(obj);
             date.setDate(date.getDate() + 1);
 		  }
-         
+
+         var monthTime = getHoursMinsFromms(monthyHoursms);
+		 Session.set('monthHrs', monthTime );	
          return days;
     },
 	
@@ -206,6 +211,12 @@ Template.body.helpers({
 		var result = Meteor.myFunctions.getRegisteredUsers();
 		Session.set('currentUser', result[0]._id);  // set currentuser to first item in the dropdown as the data is related to that user, also download csv filename is correct this way
 		return result;
+	},
+	
+	getMonthHours()
+	{
+		var res = Session.get('monthHrs');
+		return res.hour + ":" + res.min
 	}
 });
 
