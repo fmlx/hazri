@@ -9,5 +9,9 @@
 }
 
 .gray {
-  background: #C0C0C0;
+  background: #f0f0f0;
+}
+
+.today {
+  background: #FFC599;
 }
