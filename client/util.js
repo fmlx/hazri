@@ -17,7 +17,7 @@ Meteor.myFunctions  =  {
 	//	debugger;
 		var weeklyHoursms = 0;
 
-		while(date.getDay() != 1) {// sunday
+		while(date.getDay() != 1) {// monday
 		  date.setDate(date.getDate() - 1);
 		   var cursor = Meteor.myFunctions.getTiming( userid, date.getDate(), date.getMonth()+1, date.getFullYear());
 		
@@ -26,6 +26,21 @@ Meteor.myFunctions  =  {
 			   weeklyHoursms += cursor[0].hrsworkedms;
 		}
 		return weeklyHoursms;
+	},
+	findDaysWorkedInLastWeekOfPreviousMonth:  function (userid, date)
+	{
+	//	debugger;
+		var counter = 0;
+
+		while(date.getDay() != 1) {// monday
+		  date.setDate(date.getDate() - 1);
+		   var cursor = Meteor.myFunctions.getTiming( userid, date.getDate(), date.getMonth()+1, date.getFullYear());
+		
+ 		  if(cursor.length >0) 
+		     if(cursor[0].hrsworked != "")
+			   counter++;
+		}
+		return counter;
 	},
 	getUserName :function(userid) 
 	{

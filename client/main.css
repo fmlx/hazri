@@ -15,3 +15,15 @@
 .today {
   background: #FFC599;
 }
+
+.suggestText{
+   color:  #007BFF;
+   font-size: 90%;
+   font-style: italic; 
+}
+
+.normalText{
+   color:  #000;
+   font-size: 100%;
+   font-style: normal;
+}

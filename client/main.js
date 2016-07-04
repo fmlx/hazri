@@ -10,8 +10,38 @@ var monthNames = ["January", "February", "March", "April", "May", "June",
 ];
 
 var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+ Meteor.startup(function () {
 
- 
+    sAlert.config({
+        effect: '',
+        position: 'top-right',
+        timeout: 2000,
+        html: false,
+        onRouteClose: true,
+        stack: true,
+        // or you can pass an object:
+        // stack: {
+        //     spacing: 10 // in px
+        //     limit: 3 // when fourth alert appears all previous ones are cleared
+        // }
+        offset: 0, // in px - will be added to first alert (bottom or top - depends of the position in config)
+        beep: false,
+        // examples:
+        // beep: '/beep.mp3'  // or you can pass an object:
+        // beep: {
+        //     info: '/beep-info.mp3',
+        //     error: '/beep-error.mp3',
+        //     success: '/beep-success.mp3',
+        //     warning: '/beep-warning.mp3'
+        // }
+        onClose: _.noop //
+        // examples:
+        // onClose: function() {
+        //     /* Code here will be executed once the alert closes. */
+        // }
+    });
+
+});
 Template.body.rendered = function() {
 };
 
@@ -22,7 +52,6 @@ Template.body.onCreated(function helloOnCreated() {
 });
 
 Tracker.autorun(function(){
-	debugger;
   if(Meteor.userId()){
 	 Session.set("currentUser", Meteor.userId()); // use sessions as ReactiveVar had issues in Tracker to call its set() method. It needs to know the template 
     // this.currentUser = Meteor.userId();
@@ -49,7 +78,7 @@ function getDaysInNextMonth()
 //	 return [selectedDate.getMonth()+1, selectedDate.getFullYear()];
 }
 
-//from am/pm to 24 
+//from am/pm to 24. 8:10pm -> 20:10
 function convertTo24Hour(time) {
 	var hours = Number(time.match(/^(\d+)/)[1]);
 	var minutes = Number(time.match(/:(\d+)/)[1]);
@@ -61,7 +90,6 @@ function convertTo24Hour(time) {
 
 function getTimeDiff(year, month, date, In, Out, brk, rem)
 {
-	debugger;
 	var intime= convertTo24Hour(In);
 	var outtime= convertTo24Hour(Out);
 
@@ -100,7 +128,108 @@ function getTimeDiff(year, month, date, In, Out, brk, rem)
   
    return {diffms:diff, hour:hm.hour, min:hm.min};
  }
+ 
+ function suggestTime(index)
+ {debugger;
+	 var weeklyhrsputms  =0;
+	 var startofweekindex=index;
+	 var daysworkedinweek =0;// = index - startofweekindex + 1;
+	 
+	 var selectedDate = days[index];
+	 if( selectedDate.timeIn === undefined)
+		 return;
+	 
+	 var intime= convertTo24Hour( selectedDate.timeIn );
+ 	 var date1 = new Date( selectedDate.year, selectedDate.month-1, selectedDate.date, intime.hours, intime.minutes); 
 
+	 // if its the start of month then some working days were in last month
+	 if(index - days[index].day < 0)
+	 {
+		 // find hrsworked from the Sunday entry which has all the total
+		 for(var x=index; ;x++)
+		 {
+			 var d = days[x];
+			 if(d.day == 0) // sunday has the total # of hours in that week
+			 {
+				 weeklyhrsputms = convertStrToMs( d.weeklyHours ) * 60 * 1000;
+				 break;
+			 }
+		 }
+		 
+		 daysworkedinweek = Meteor.myFunctions.findDaysWorkedInLastWeekOfPreviousMonth( Session.get("currentUser"), new Date(date1)) ; // new Date as it decrements original
+		  
+		  // now find days worked in this week of current month
+		  // skip the current day as if it has hoursworked already mention then dont get it counted as index date is later added in daysworkedinweek
+		 for(var g=index-1; g>=0; g--)
+		 {
+			  var d = days[g];
+			 
+			 // skip if it was a leave or holiday. only count if diff is present
+			 if(d.timediff != "" && d.timediff != undefined)
+				 daysworkedinweek ++;
+		 }
+	 }
+	 else
+	 {
+		 for(var i=index -1; i >=0; i--)
+		 {
+			 var d = days[i];
+			 
+			 if(d.day == 0) // sunday
+				break;
+				
+			 // skip if it was a leave or holiday. only count if diff is present
+			 if(d.timediff != "" && d.timediff != undefined)
+				 daysworkedinweek ++;
+			 
+			 weeklyhrsputms += convertStrToMs( d.timediff ) * 60 * 1000;
+		 }
+	 }
+	 
+	 daysworkedinweek++; // add current day also
+	 
+	 var shouldworkedinweekms = daysworkedinweek * convertStrToMs('9:00') * 60* 1000;
+	 
+	 var diffms = shouldworkedinweekms - weeklyhrsputms;
+	 if(diffms < 0)
+		 return 'Go home now!';
+	 
+	 var brkmins = 0, wfhmins = 0;
+	 if(days[index].breakTime != "")
+	 {
+		var br = days[index].breakTime.split(':');
+	    brkmins = parseInt(br[0])*60+ parseInt(br[1]);
+	 }
+	 
+	 var remark = days[index].remarks;
+	 if(days[index].remarks.indexOf(' ')>0)
+		remark = days[index].remarks.substr(0,days[index].remarks.indexOf(' '));
+	
+	var w = remark.split(':');
+	 wfhmins = parseInt(w[0])*60+ parseInt(w[1]);
+	
+	 // if its a txt remark then dont include it in hours worked calculation
+	 if(isNaN(wfhmins))
+		wfhmins = 0;
+
+	 date1 = date1.getTime() + diffms + brkmins * 60*1000 - wfhmins *60*1000;
+	 //date1 += diffms;
+	// days[index].timeOut =  new Date(date1 );
+	 var da = new Date( date1 );
+	// days[index].timeOut = da;
+	 return da;
+ }
+
+ // converts time str like 45:35 to ms
+ function convertStrToMs(timestr)
+ {
+	 if(timestr === "" ||  timestr ===undefined )
+		return 0;
+	
+	var br = timestr.split(':');
+	return parseInt(br[0])*60+ parseInt(br[1]);
+ }
+ 
  function getHoursMinsFromms(msec)
  {
 	var hh = Math.floor(msec / 1000 / 60 / 60);
@@ -147,8 +276,8 @@ Template.body.helpers({
 		 // cursor.forEach(function (post) {
            // console.log("Title of post "+ post.day);
        // });
-	   debugger;
-	    var weeklyHoursms = 0, monthyHoursms = 0;
+
+	   var weeklyHoursms = 0, monthyHoursms = 0, index = 0;
 	    while (date.getMonth() === month-1) {
 			  var cursor = Meteor.myFunctions.getTiming( Session.get("currentUser"), date.getDate(), date.getMonth()+1, date.getFullYear());
 		//	  var cursor = getTiming1();
@@ -167,7 +296,10 @@ Template.body.helpers({
 				 date: date.getDate(),
 				 month: (date.getMonth()+1),
 				 year: date.getFullYear(),
+				 index: index,
 		      }
+			  
+			  index++;
 			  
 	//		  debugger;
 		  	if(cursor.length >0) // if there is record in db for this date
@@ -221,48 +353,7 @@ Template.body.helpers({
 });
 
 Template.body.events({
-   "submit form": function (event) {  // this refers to the object we created when we created  timing record, this._id was set there
-      // Prevent default browser form submit
-      event.preventDefault();
-      // Get value from form element
-      var In = event.target.In.value;
-      var Out = event.target.Out.value;
-      var Break = event.target.Break.value;
-      var Remarks = event.target.Remarks.value;
-
-	  if (! Meteor.userId() || Meteor.user().username === 'admin')  {
-          throw new Meteor.Error("Not authorized to change without valid user login");
-      }
-		
-	debugger;
-	
-	Remarks = Remarks.replace(',','.'); // replace , with smthing else as it disturbs the CSV output 
-	 var hrsworkedms = 0, hrsworked = "";
-	 if(In != '' && Out != '')
-	 {
-		  var d1 =  this.year + "-" + this.month + "-" + this.date+ " " + In;
-		  var d2 =  this.year + "-" + this.month + "-" + this.date  + " " + Out;
-			   
-		 var result = getTimeDiff(this.year, this.month-1, this.date, In, Out, Break, Remarks);
-		 hrsworkedms = result.diffms;
-		 hrsworked = result.hour + ":" + result.min;
-	 }
-	 
-	  if(this.id) // id already in db so update case
-	  {
-	    Timing.update(this.id, { // this.id is from getdaysinparticularmonth loop
-		$set: {in: In, out: Out, hrsworkedms:hrsworkedms, hrsworked: hrsworked, breakTaken: Break, remarks:Remarks} });
-   	  }
-	  else
-	  {
-		    Timing.insert({ userid: Meteor.userId(), usename: Meteor.user().username, 
-				day: this.date, month: this.month, year:this.year, in: In, out:Out, hrsworkedms:hrsworkedms, hrsworked: hrsworked, breakTaken: Break, remarks:Remarks});
-	  }
-		
-	// Meteor.call('saveTask', text);
-      // Clear form
-      event.target.text.value = "";
-    },
+ 
 	 'click #prev'(event, instance) {
 		   getDaysInPreviousMonth();
     },
@@ -321,14 +412,89 @@ Template.body.events({
 	'change #allusers' (event, instance){
 		debugger;
 		var currentTarget = event.currentTarget;
-       	 Session.set("currentUser", currentTarget.options[currentTarget.selectedIndex].value );
+       	Session.set("currentUser", currentTarget.options[currentTarget.selectedIndex].value );
 	}
 });
 
-Template.hello.events({
-  'click button'(event, instance) {
-    // increment the counter when button is clicked
-    instance.counter.set(instance.counter.get() + 1);
+Template.calendarRow.events({
+	  "submit form": function (event, instance) {  // this refers to the object we created when we created  timing record, this._id was set there
+      // Prevent default browser form submit
+      event.preventDefault();
+      // Get value from form element
+      var In = event.target.In.value;
+      var Out = event.target.Out.value;
+      var Break = event.target.Break.value;
+      var Remarks = event.target.Remarks.value;
+      var obj = instance.data;
+ 	  debugger;
+	  	  $('#timeout'+ obj.index).attr("class","normalText");
+		  
+	  if (! Meteor.userId() || Meteor.user().username === 'admin')  {
+          throw new Meteor.Error("Not authorized to change without valid user login");
+      }
+		
+	Remarks = Remarks.replace(',','.'); // replace , with smthing else as it disturbs the CSV output 
+	 var hrsworkedms = 0, hrsworked = "";
+	 if(In != '' && Out != '')
+	 {
+		  var d1 =  this.year + "-" + this.month + "-" + this.date+ " " + In;
+		  var d2 =  this.year + "-" + this.month + "-" + this.date  + " " + Out;
+			   
+		 var result = getTimeDiff(this.year, this.month-1, this.date, In, Out, Break, Remarks);
+		 hrsworkedms = result.diffms;
+		 hrsworked = result.hour + ":" + result.min;
+	 }
+	 
+	  if(this.id) // id already in db so update case
+	  {
+	    Timing.update(this.id, { // this.id is from getdaysinparticularmonth loop
+		$set: {in: In, out: Out, hrsworkedms:hrsworkedms, hrsworked: hrsworked, breakTaken: Break, remarks:Remarks} });
+		sAlert.info('Saved...', { position: 'top-right', timeout: '2000', onRouteClose: false, stack: false, offset: '180px'});
+
+   	  }
+	  else
+	  {
+		    Timing.insert({ userid: Meteor.userId(), usename: Meteor.user().username, 
+				day: this.date, month: this.month, year:this.year, in: In, out:Out, hrsworkedms:hrsworkedms, hrsworked: hrsworked, breakTaken: Break, remarks:Remarks});
+	  }
+		
+	// Meteor.call('saveTask', text);
+      // Clear form
+      event.target.text.value = "";
+    },
+   'click #suggest'(event, instance) {
+	  event.preventDefault();
+debugger;
+      var obj = instance.data;
+	  var t2 = suggestTime( obj.index );
+	  
+	  if( t2 === undefined)
+		  return;
+	  
+	  if(typeof(t2) === 'string')
+	  {
+		  $('#timeout'+obj.index).val( t2 );
+    	  $('#timeout'+obj.index).attr("class","suggestText");
+		  return;
+      }
+	   //it is pm if hours from 12 onwards
+	  var hours = t2.getHours();
+	  suffix = (hours >= 12)? 'pm' : 'am';
+      //only -12 from hours if it is greater than 12 (if not back at mid night)
+      hours = (hours > 12)? hours -12 : hours;
+      //if 00 then it is 12 am
+      hours = (hours == '00')? 12 : hours;
+	  var mins =  t2.getMinutes() ;
+	  if(parseInt(mins)<10)
+	     mins = '0' + mins;
+
+	  var estdate = "";
+      if(obj.date != t2.getDate())
+		 estdate = " (" + t2.getDate() + "-" + (t2.getMonth() + 1) + ")" ;
+	
+	  $('#timeout'+obj.index).val( hours + ":" + mins + " " + suffix + estdate );
+	  $('#timeout'+obj.index).attr("class","suggestText");
+//	  alert("Leaving time today should be : " + t2);
   },
 });
 

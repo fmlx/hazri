@@ -35,6 +35,8 @@
 </head>
 
 <body>
+ {{> sAlert}}
+
  <div class="container">
 <!-- {{>loginModal}} -->
 
@@ -55,7 +57,8 @@
 	  <button class="btn btn-info" id="download">Download as CSV</button>
 	<br>
 	{{/if}}
-
+  <button class="btn btn-info" id="download">Download as CSV</button>
+	
 <div class="clearfix">
   <h2 style="float: left;left: -50%;" > {{selectedMonth}} - {{selectedYear}}</h2>
   <button value="Next" id="next" class="btn btn-primary" style="float: right; position: relative; top: 10px; right: 10px;">Next</button>
@@ -95,13 +98,19 @@
 	<div><span class="text">{{this.dayname}}</span> </div>
 	<div><span class="text"  style="float: left; position: relative; top:5px; left: -20px;">{{this.date}}-{{this.month}}-{{this.year}}</span> </div>
 
-	<div><input id="clockpick" type="text"  name="In" placeholder="hh:mm am/pm" value="{{this.timeIn}}" onchange="validateHhMm12(this);"></div>
-	<div><input type="text" name="Out" placeholder="hh:mm am/pm" value="{{this.timeOut}}"  onchange="validateHhMm12(this);"/></div>
+	<div><input type="text"  name="In" placeholder="hh:mm am/pm" value="{{this.timeIn}}" onchange="validateHhMm12(this);"></div>
+	<div><input type="text" name="Out" id="timeout{{index}}" placeholder="hh:mm am/pm" value="{{this.timeOut}}"  onchange="validateHhMm12(this);"/></div>
+	
 	<div><input type="text" name="Break" placeholder="hh:mm" value="{{this.breakTime}}"  onchange="validateHhMm(this);"/></div>
 	<div><input type="text" name="Remarks" placeholder="" value="{{this.remarks}}" /></div>
 	<div><span class="text">{{this.timediff}} </span> {{#if equals this.day 0}} <span>  <strong> {{this.weeklyHours}} </strong></span>{{/if}}</div>
+<!-- 	 {{#if isToday this.date this.month this.year}} -->
+	 <!--    <div> <button  type="button" class="btn btn-info" id="suggest">!</button></div> --> 
+		<img id="suggest" src="/images/suggest.png"/>
+	<!-- {{/if}}	 -->
 	<div><input type="submit" style="position: absolute; left: -9999px"/> </div>
   </form>
+ 
 </template>
 
 <template name="hello">
