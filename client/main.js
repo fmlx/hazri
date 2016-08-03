@@ -144,6 +144,7 @@ function getTimeDiff(year, month, date, In, Out, brk, rem)
  
  function suggestTime(index)
  {
+	 debugger;
 	 var weeklyhrsputms  =0;
 	 var startofweekindex=index;
 	 var daysworkedinweek =0;// = index - startofweekindex + 1;
@@ -156,7 +157,7 @@ function getTimeDiff(year, month, date, In, Out, brk, rem)
  	 var date1 = new Date( selectedDate.year, selectedDate.month-1, selectedDate.date, intime.hours, intime.minutes); 
 
 	 // if its the start of month then some working days were in last month
-	 if(index - days[index].day < 0)
+	 if(index - ((days[index].day + 6) %7 ) < 0)
 	 {
 		 // find hrsworked from the Sunday entry which has all the total
 		 for(var x=index; ;x++)
@@ -201,7 +202,7 @@ function getTimeDiff(year, month, date, In, Out, brk, rem)
 	 
 	 daysworkedinweek++; // add current day also
 	 
-	 var shouldworkedinweekms = daysworkedinweek * convertStrToMs('9:00') * 60* 1000;
+	 var shouldworkedinweekms = daysworkedinweek * convertStrToMs('10:00') * 60* 1000;
 	 
 	 var diffms = shouldworkedinweekms - weeklyhrsputms;
 	 if(diffms < 0)
