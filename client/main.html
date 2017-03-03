@@ -1,5 +1,5 @@
 <head>
-  <title>simple</title>
+  <title>Attendance Sheet</title>
   
 <SCRIPT TYPE="text/JavaScript">
     function validateHhMm12(inputField) {
@@ -7,13 +7,17 @@
 	      return true;
 		  
         var isValid = /^(0?[1-9]|1[012])(:[0-5]\d) [APap][mM]$/.test(inputField.value);
+        isValid |= /^([01]\d|2[0-3]):?([0-5]\d)$/.test(inputField.value);
 
         if (isValid) {
             inputField.style.backgroundColor = '#bfa';
         } else {
             inputField.style.backgroundColor = '#fba';
+            return false;
         }
 
+		var momentObj = moment(inputField.value, ["HH:mm A"])
+		inputField.value = momentObj.format("hh:mm A");
         return isValid;
     }
 	
@@ -22,15 +26,57 @@
 	      return true;
 		
         var isValid = /^(0?[1-9]|1[012])(:[0-5]\d) $/.test(inputField.value);
+		isValid |= /^([01]\d|2[0-3]):?([0-5]\d)$/.test(inputField.value);
+        isValid = parseInt( inputField.value);
 
         if (isValid) {
             inputField.style.backgroundColor = '#bfa';
         } else {
             inputField.style.backgroundColor = '#fba';
+            return false;
+        }
+
+		var momentObj = moment(inputField.value, ["HH:mm"])
+		inputField.value = momentObj.format("HH:mm");
+        return isValid;
+	}
+
+     function validateWFH(inputField) {
+	    if(inputField == null)
+	      return true;
+
+		var time = inputField.value;
+		var rem = "";
+
+		if(inputField.value.indexOf(' ')>0)
+		{
+  		  time = inputField.value.substr(0,inputField.value.indexOf(' '));
+  		  rem = inputField.value.substr(inputField.value.indexOf(' ')+1);
+		}
+	
+        var isValid = /^(0?[1-9]|1[012])(:[0-5]\d) $/.test(time);
+  		isValid |= /^([01]\d|2[0-3]):?([0-5]\d)$/.test(time);
+ 		isValid = parseInt( time );
+       
+        if (isValid) {
+            var momentObj = moment(time, ["HH:mm"]);
+			inputField.value = momentObj.format("HH:mm");
+			inputField.value += " " + rem;
         }
 
         return isValid;
     }
+
+    function onkeyUp(e, elem) {
+    // this would test for whichever key is 40 and the ctrl key at the same time
+	    if (e.charCode == 116) {
+	        // call your function to do the thing
+	       e.preventDefault();
+	       var momentObj = moment();
+		   elem.value = momentObj.format("hh:mm A");
+	    }
+	}
+
 </SCRIPT>
 </head>
 
@@ -41,7 +87,7 @@
 <!-- {{>loginModal}} -->
 
 	<div class="clearfix">
-		<h3 class="text-center"  style="float: left; position: relative; top:0px; left: 0px;">Hazri Sheet - Formulatrix</h3>
+		<h3 class="text-center"  style="float: left; position: relative; top:0px; left: 0px;">Ghanta Department - Formulatrix</h3>
 		<div style="float: right; position: relative; top: 10px; right: 12px;"> {{> loginButtons}} </div>
 	 </div>
 	  
@@ -52,13 +98,23 @@
 			<option value={{this._id}}>{{this.username}}</option>
 		{{/each}}
 		</select>
-	
-	
-	  <button class="btn btn-info" id="download">Download as CSV</button>
 	<br>
 	{{/if}}
-  <button class="btn btn-info" id="download">Download as CSV</button>
-	
+
+    {{#if isAdmin currentUser}}
+  		<button class="btn btn-info" id="download">Download as CSV</button>
+	{{/if}}	
+
+    <p class="bg-success">
+		<h4> Updates </h4>
+		<ul style="background-color:#ffffe9;">
+			<li> Just type 't' in In or Out fields and current time will be filled automatically</li>
+			<li> In and Out now support 24hr format, for eg, '1730' will automatically convert into '05:30 pm'</li>
+			<li> Remarks and WFH support just a number also, for eg, '1' means 1 hour and it automatially converts it into '01:00'</li>
+			<li> WFH also accepts text input and time + text input, for e.g '1:45 wfh due to support issue' is valid</li>
+		</ul>
+	</p>
+
 <div class="clearfix">
   <h2 style="float: left;left: -50%;" > {{selectedMonth}} - {{selectedYear}}</h2>
   <button value="Next" id="next" class="btn btn-primary" style="float: right; position: relative; top: 10px; right: 10px;">Next</button>
@@ -69,12 +125,16 @@
 	
 	<div class="table"> 
 		<h3 class="bg-success">
+		{{#if isAdmin currentUser}}
+		    <div></div>
+		{{/if}}
+
 			<div>Date</div>
 			<div></div>
 			<div>In</div>
 			<div>Out</div>
 			<div>Break</div>
-			<div>Remarks</div>
+			<div>WFH</div>
 			<div>Worked</div>
 			
 		</h3>	
@@ -83,10 +143,11 @@
 				{{>calendarRow}}
 		    {{/each}}
 	  </div>
-	  
-	  <hr>
+	 
+ 	  <hr>
 	  <div style="float: right; position: relative; top: 0px; right: 12px; bottom: 20px">   <h4>Hours work in month = {{getMonthHours}} </h4> </div>
 	  <br> <br> <br>
+
 {{/if}}
 
  </div>
@@ -94,24 +155,91 @@
 </body>
 
 <template name="calendarRow">
-  <form class="new-task1 {{#if equals this.day 0}}gray{{/if}}  {{#if equals this.day 6}}gray{{/if}} {{#if isToday this.date this.month this.year}}today{{/if}}">
+  <form id="formid{{index}}" class="new-task1 {{#if equals this.day 0}}gray{{/if}}  {{#if equals this.day 6}}gray{{/if}} {{#if isToday this.date  this.month this.year}}today{{/if}}">
+    {{#if isAdmin currentUser}}
+	   <img id="historybtn" src="/images/info1.png"/>
+   	{{/if}}	
 	<div><span class="text">{{this.dayname}}</span> </div>
-	<div><span class="text"  style="float: left; position: relative; top:5px; left: -20px;">{{this.date}}-{{this.month}}-{{this.year}}</span> </div>
+	<div><span class="text"  style="float: left; position: relative; top:5px; left: -20px;">{{this.date}}-{{this.monthname}}</span> </div>
 
-	<div><input type="text"  name="In" placeholder="hh:mm am/pm" value="{{this.timeIn}}" onchange="validateHhMm12(this);"></div>
-	<div><input type="text" name="Out" id="timeout{{index}}" placeholder="hh:mm am/pm" value="{{this.timeOut}}"  onchange="validateHhMm12(this);"/></div>
+	<div><input class="text" type="text"  name="In" placeholder="hh:mm am/pm" value="{{this.timeIn}}" onchange="validateHhMm12(this);" onkeypress="onkeyUp(event,this)">
+	</div>
+	<div><input type="text" name="Out" id="timeout{{index}}" placeholder="hh:mm am/pm" value="{{this.timeOut}}"  onchange="validateHhMm12(this);" onkeypress="onkeyUp(event,this)"/></div>
 	
 	<div><input type="text" name="Break" placeholder="hh:mm" value="{{this.breakTime}}"  onchange="validateHhMm(this);"/></div>
-	<div><input type="text" name="Remarks" placeholder="" value="{{this.remarks}}" /></div>
+	<div><input type="text" name="Remarks" placeholder="" value="{{this.remarks}}" onchange="validateWFH(this);"/></div>
 	<div><span class="text">{{this.timediff}} </span> {{#if equals this.day 0}} <span>  <strong> {{this.weeklyHours}} </strong></span>{{/if}}</div>
 <!-- 	 {{#if isToday this.date this.month this.year}} -->
 	 <!--    <div> <button  type="button" class="btn btn-info" id="suggest">!</button></div> --> 
-		<img id="suggest" src="/images/suggest.png"/>
+	{{#if isToday this.date this.month this.year}}<img id="suggest" src="/images/suggest.png"/> {{/if}}
+	
 	<!-- {{/if}}	 -->
 	<div><input type="submit" style="position: absolute; left: -9999px"/> </div>
   </form>
- 
+
+
+ <!-- historybtn sets session var which fires tracker to update subscription. hastimingsrecords returns the timing recs count for this iteration -->
+	{{#if HasTimingRecords this}}
+
+	 <h4>History</h4>
+		<table class="table" style="background-color:#ffffe9;">
+			<tbody>
+				<tr class="info">
+				<br>
+					<td width="600px">Date</td>
+					<td>In</td>
+					<td>Out</td>
+					<td>Break</td>
+					<td>WFH</td>
+					<td>By</td>
+				</tr>
+				<br>
+<!--        <div class="panel panel-info">
+    
+     <div class="row">
+	  <div class="col-md-8">By</div>
+	  <div class="col-md-4">Date</div>
+	 </div> -->
+     
+
+		{{#each getHistoryOfTiming this}} 
+			{{>history}}
+		{{/each}}
+
+		</tbody>
+	</table>
+
+   {{/if}}
+
 </template>
+
+<template name="history">
+ <!--  <div class="panel-body"></div>
+  <div class="panel-body"> </div>
+ -->
+<!--   <div class="panel-body">{{byuser}} </div>
+
+   <div class="panel-body">{{formatDate date}} </div>
+ -->
+
+<!-- 	<div class="row">
+	  <div class="col-md-8">{{byuser}}</div>
+	  <div class="col-md-4">{{formatDate date}}</div>
+	</div>
+ -->
+
+   <tr>
+  	 <td>{{formatDate date}} </td>
+     <td>{{in}}</td>
+  	 <td>{{out}}</td>
+  	 <td>{{breakTaken}}</td>
+  	 <td>{{remarks}}</td>
+     
+     <td>{{byuser}}</td>
+   </tr>
+  <br>
+</template>
+
 
 <template name="hello">
   <button>Click Me</button>

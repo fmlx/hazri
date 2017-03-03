@@ -1,3 +1,6 @@
+
+// meteor --release 1.3.2.4
+
 import { Template } from 'meteor/templating';
 import { ReactiveVar } from 'meteor/reactive-var';
 
@@ -10,7 +13,8 @@ var monthNames = ["January", "February", "March", "April", "May", "June",
 ];
 
 var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
- Meteor.startup(function () {
+
+Meteor.startup(function () {
 
     sAlert.config({
         effect: '',
@@ -53,7 +57,7 @@ Template.body.onCreated(function helloOnCreated() {
 
    Tracker.autorun(() => {
 	 var d = new Date(self.selectedDate.get()); // whenever selectedDate changes run and get new months data
-	 const handle = Meteor.subscribe('timingspub', Meteor.userId(), d.getMonth() + 1, d.getFullYear());
+	 const handle = Meteor.subscribe('timingspub', Session.get("currentUser"), d.getMonth() + 1, d.getFullYear());
 	 
 		Tracker.autorun(() => {
 		  const isReady = handle.ready();
@@ -62,6 +66,32 @@ Template.body.onCreated(function helloOnCreated() {
 		  console.log(Timing.find().count());
 		});
 	});
+	
+	
+});
+
+// global helper
+Template.registerHelper('formatDate', function(date) {
+    return moment(date).format("hh:mma DD-MMM-YY");
+});
+
+Template.calendarRow.onCreated(function helloOnCreated() {
+     var self = this;
+	 
+	// var historyId = new ReactiveVar;
+	  
+	 //https://stackoverflow.com/questions/32195460/how-can-i-make-meteor-subscriptions-dynamic
+	 // Put in tracker as it clears previous values automatically
+	 // will fire automatically due to session.get
+	Tracker.autorun(() => {
+		 if(Session.get("historyId")){
+		  //  debugger;
+		//	Session.set("thishistory",)
+		    const handle = self.subscribe('timinghistorypub', Session.get("historyId"));
+			//if(handle.ready())
+	 	    //  console.log(TimingHistory.find().fetch());
+		 }
+		});
 });
 
 Tracker.autorun(function(){
@@ -157,7 +187,7 @@ function getTimeDiff(year, month, date, In, Out, brk, rem)
  	 var date1 = new Date( selectedDate.year, selectedDate.month-1, selectedDate.date, intime.hours, intime.minutes); 
 
 	 // if its the start of month then some working days were in last month
-	 if(index - ((days[index].day + 6) %7 ) < 0)
+	 if(index - ((days[index].day + 6) %7 ) < 0) // if current index is less that day number  
 	 {
 		 // find hrsworked from the Sunday entry which has all the total
 		 for(var x=index; ;x++)
@@ -169,19 +199,23 @@ function getTimeDiff(year, month, date, In, Out, brk, rem)
 				 break;
 			 }
 		 }
-		 
-		 daysworkedinweek = Meteor.myFunctions.findDaysWorkedInLastWeekOfPreviousMonth( Session.get("currentUser"), new Date(date1)) ; // new Date as it decrements original
+		
+			// prev month data already loaded in the data loading stage
+			// prev month + current month except current date
+	    daysworkedinweek = Meteor.myFunctions.findDaysWorkedInLastWeekOfPreviousMonth( Session.get("currentUser"), new Date(date1)) ; // new Date as it decrements original
 		  
 		  // now find days worked in this week of current month
 		  // skip the current day as if it has hoursworked already mention then dont get it counted as index date is later added in daysworkedinweek
-		 for(var g=index-1; g>=0; g--)
-		 {
-			  var d = days[g];
+		 
+		 // finddaysworkedinlastweek calclates prev month and this week also except current
+		 // for(var g=index-1; g>=0; g--)
+		 // {
+			  // var d = days[g];
 			 
-			 // skip if it was a leave or holiday. only count if diff is present
-			 if(d.timediff != "" && d.timediff != undefined)
-				 daysworkedinweek ++;
-		 }
+			 // // skip if it was a leave or holiday. only count if diff is present
+			 // if(d.timediff != "" && d.timediff != undefined)
+				 // daysworkedinweek ++;
+		 // }
 	 }
 	 else
 	 {
@@ -202,7 +236,11 @@ function getTimeDiff(year, month, date, In, Out, brk, rem)
 	 
 	 daysworkedinweek++; // add current day also
 	 
-	 var shouldworkedinweekms = daysworkedinweek * convertStrToMs('10:00') * 60* 1000;
+	 var hoursreqperday = "10:00";
+	 if(Meteor.user().username  === "sami" || Meteor.user().username  === "Asad")
+	 	hoursreqperday = "08:00";
+
+	 var shouldworkedinweekms = daysworkedinweek * convertStrToMs(hoursreqperday) * 60* 1000;
 	 
 	 var diffms = shouldworkedinweekms - weeklyhrsputms;
 	 if(diffms < 0)
@@ -280,6 +318,7 @@ Template.body.helpers({
 	},
 	
 	getDaysInParticularMonth(array) {
+	
 		 var month = array[0];
 		 var year = array[1];
 		 Session.get("dataready");
@@ -295,7 +334,7 @@ Template.body.helpers({
 //debugger;
 	   var weeklyHoursms = 0, monthyHoursms = 0, index = 0;
 	    while (date.getMonth() === month-1) {
-	//	debugger;
+		//debugger;
 			  var cursor = Meteor.myFunctions.getTiming( Session.get("currentUser"), date.getDate(), date.getMonth()+1, date.getFullYear());
 			
 			// var cursor = null;
@@ -308,7 +347,14 @@ Template.body.helpers({
 				//});
 					 if(date.getDate() == 1 && date.getDay() != 1) // if first day of month is not monday then find hrsworked from previous month also
 					//	weeklyHoursms = Meteor.myFunctions.findPreviousMonthsHrsWorked( Session.get("currentUser"), new Date(date));
-						weeklyHoursms = Meteor.myFunctions.findPreviousMonthsHrsWorked(Session.get("currentUser"), new Date(date));
+					{
+							const handle = Meteor.subscribe('timingspub', Meteor.userId(), date.getMonth(), date.getFullYear()); // get data of prev month loaded
+	 
+							Tracker.autorun(() => {
+ 							    if(handle.ready())
+									weeklyHoursms = Meteor.myFunctions.findPreviousMonthsHrsWorked(Session.get("currentUser"), new Date(date));
+							 });
+					}
 					 
 					 let intime,outtime, timingid;
 
@@ -318,6 +364,7 @@ Template.body.helpers({
 						 day: date.getDay(),
 						 date: date.getDate(),
 						 month: (date.getMonth()+1),
+						 monthname: monthNames[(date.getMonth())].substr(0,3),
 						 year: date.getFullYear(),
 						 index: index,
 					  }
@@ -355,8 +402,8 @@ Template.body.helpers({
 					days.push(obj);
 					
 			//	});
-	date.setDate(date.getDate() + 1);
-	}
+	       date.setDate(date.getDate() + 1);
+	    }
 		//	  var cursor = getTiming1();
 	//	debugger;
 		
@@ -366,17 +413,52 @@ Template.body.helpers({
     },
 	
 	getRegisteredUsers()
-	{
-		var result = Meteor.myFunctions.getRegisteredUsers();
-		Session.set('currentUser', result[0]._id);  // set currentuser to first item in the dropdown as the data is related to that user, also download csv filename is correct this way
-		return result;
+	{		
+		// const handle = Meteor.subscribe('registeredusers');
+	 
+		// Tracker.autorun(() => {
+			// debugger;
+		  // const ready =	handle.ready();
+		  // if(ready)
+		  // {
+  		     // Session.set('currentUser', result[0]._id);  // set currentuser to first item in the dropdown as the data is related to that user, also download csv filename is correct this way
+			 // return Meteor.users();
+		  // }
+		// });
+		const handle1 = Meteor.subscribe('registeredusers');
+		Tracker.autorun(() => {
+		  if(handle1.ready())
+		  {
+		   }
+		});	 
+			
+		  var result = Meteor.myFunctions.getRegisteredUsers();
+		    return result;
+		 
 	},
 	
 	getMonthHours()
 	{
 		var res = Session.get('monthHrs');
 		return res.hour + ":" + res.min
+	},
+	
+
+    getHistoryOfTiming()
+	{
+		return TimingHistory.find().fetch();
 	}
+});
+
+Template.calendarRow.helpers({
+	getHistoryOfTiming(array)
+	{
+		if(array.id == undefined)
+			return null;
+	//	console.log( "timings hist" + TimingHistory.find().count());
+		return TimingHistory.find({timingid:array.id}).fetch();
+	}
+
 });
 
 Template.body.events({
@@ -393,7 +475,7 @@ Template.body.events({
 		
 		// get current username from his _id
 		var filename =  Meteor.myFunctions.getUserName( Session.get('currentUser') )[0].username + '-'+monthNames[d.getMonth()] + '.csv';
-		var fileData = "Day,Date,Time in,Time out,Break,Remarks,Daily Hours,Weekly Hours \r\n";
+		var fileData = "Day,Date,Time in,Time out,Break,WFH,Daily Hours,Weekly Hours \r\n";
 
 		var headers = {
 		  'Content-type': 'text/csv',
@@ -444,7 +526,7 @@ Template.body.events({
 });
 
 Template.calendarRow.events({
-	  "submit form": function (event, instance) {  // this refers to the object we created when we created  timing record, this._id was set there
+	"submit form": function (event, instance) {  // this refers to the object we created when we created  timing record, this._id was set there
       // Prevent default browser form submit
       event.preventDefault();
       // Get value from form element
@@ -453,49 +535,93 @@ Template.calendarRow.events({
       var Break = event.target.Break.value;
       var Remarks = event.target.Remarks.value;
       var obj = instance.data;
- 	  debugger;
-	  	  $('#timeout'+ obj.index).attr("class","normalText");
+ 	debugger;
+ 	  $('#timeout'+ obj.index).attr("class","normalText");
 		  
 	  if (! Meteor.userId() || Meteor.user().username === 'admin')  {
-          throw new Meteor.Error("Not authorized to change without valid user login");
+         throw new Meteor.Error("Not authorized to change without valid user login");
       }
 		
-	Remarks = Remarks.replace(',','.'); // replace , with smthing else as it disturbs the CSV output 
+	 Remarks = Remarks.replace(',','.'); // replace , with smthing else as it disturbs the CSV output 
 	 var hrsworkedms = 0, hrsworked = "";
 	 if(In != '' && Out != '')
 	 {
-		  var d1 =  this.year + "-" + this.month + "-" + this.date+ " " + In;
-		  var d2 =  this.year + "-" + this.month + "-" + this.date  + " " + Out;
+		 var d1 =  this.year + "-" + this.month + "-" + this.date+ " " + In;
+		 var d2 =  this.year + "-" + this.month + "-" + this.date  + " " + Out;
 			   
 		 var result = getTimeDiff(this.year, this.month-1, this.date, In, Out, Break, Remarks);
 		 hrsworkedms = result.diffms;
 		 hrsworked = result.hour + ":" + result.min;
-	 }
-	 
-	  if(this.id) // id already in db so update case
-	  {
-	  //  Timing.update(this.id, { // this.id is from getdaysinparticularmonth loop
-		//  $set: {in: In, out: Out, hrsworkedms:hrsworkedms, hrsworked: hrsworked, breakTaken: Break, remarks:Remarks} });
-		Meteor.call('updateTiming', this.id, this.date, this.month, this.year, In, Out, hrsworkedms, hrsworked, Break, Remarks,
-			function(error, result)
-			{
-				debugger;
-				if(!error)
-				   sAlert.info('Saved...', { position: 'top-right', timeout: '2000', onRouteClose: false, stack: false, offset: '180px'});
-			});
-   	  }
-	  else
-	  {
-	 	Meteor.call('saveTiming', Meteor.userId(), Meteor.user().username, this.date, this.month, this.year, In, Out, hrsworkedms, hrsworked, Break, Remarks);
 	  }
+	 
+	  var self = this;
+	  Meteor.call("getServerTime", function (error, result) {
+            Session.set("time", result);
+            debugger;
+            if(error)
+            {
+                sAlert.info('Cannot communicate with server', { position: 'top-right', timeout: '2000', onRouteClose: false, stack: false, offset: '180px'});
+            	return;
+            }
+
+            var recDate = moment(new Date( self.year, self.month-1, self.date));
+
+            var mdate = moment(result);
+
+			var duration = moment.duration(mdate.diff(recDate));
+			var diffDays = duration.asDays();
+
+         //   var timeDiff = Math.abs(result.getTime() - recDate.getTime());
+		//	var diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24)); 
+			if(diffDays< 0)
+			{
+				sAlert.info('You cannot predict future..', { position: 'top-right', timeout: '3000', onRouteClose: false, stack: false, offset: '220px'});
+                return;
+			}
+            if(diffDays > 5)
+            {
+                sAlert.info('Not authorized to modify old records...', { position: 'top-right', timeout: '3000', onRouteClose: false, stack: false, offset: '220px'});
+                return;
+            }
+            else
+            {
+        	  if(self.id) // id already in db so update case
+			  {
+			  //  Timing.update(this.id, { // this.id is from getdaysinparticularmonth loop
+				//  $set: {in: In, out: Out, hrsworkedms:hrsworkedms, hrsworked: hrsworked, breakTaken: Break, remarks:Remarks} });
+				Meteor.call('updateTiming', self.id, Meteor.user().username, self.date, self.month, self.year, In, Out, hrsworkedms, hrsworked, Break, Remarks,
+					function(error, result)
+					{
+						if(!error)
+						   sAlert.info('Saved...', { position: 'top-right', timeout: '2000', onRouteClose: false, stack: false, offset: '180px'});
+					});
+		   	  }
+			  else
+			  {
+			 	Meteor.call('saveTiming', Meteor.userId(), Meteor.user().username, self.date, self.month, self.year, In, Out, hrsworkedms, hrsworked, Break, Remarks,
+		 			function(error, result)
+					{
+						if(!error)
+						   sAlert.info('Saved...', { position: 'top-right', timeout: '2000', onRouteClose: false, stack: false, offset: '180px'});
+					});
+
+			  }
+            }
+        });
+
 		
 	// Meteor.call('saveTask', text);
       // Clear form
      // event.target.text.value = "";
     },
+    'focusout input.text': function (evt, template) {
+      if (evt.which === 0) {
+      	//  $('#formid'+ template.data.index).submit();
+      }
+    },
    'click #suggest'(event, instance) {
 	  event.preventDefault();
-debugger;
+
       var obj = instance.data;
 	  var t2 = suggestTime( obj.index );
 	  
@@ -527,8 +653,24 @@ debugger;
 	  $('#timeout'+obj.index).attr("class","suggestText");
 //	  alert("Leaving time today should be : " + t2);
   },
-});
+  
+  'click #historybtn'(event, instance){
+	   event.preventDefault();
+	    var obj = instance.data;
 
+        var previousId = Session.get("historyId"); 
+
+        // fires subscription in tracker
+		if(previousId != obj.id)		
+			Session.set("historyId", obj.id);
+
+ 		if(previousId === obj.id &&  Session.get("historyShown") === 1)
+	      Session.set("historyShown", 0);
+		else
+		  Session.set("historyShown", 1);
+  }
+});
+//
 Accounts.ui.config({
    passwordSignupFields: "USERNAME_ONLY"
 });	
@@ -537,6 +679,20 @@ Accounts.ui.config({
 Template.registerHelper('equals',
     function(v1, v2) {
         return (v1 === v2);
+    }
+);
+
+Template.registerHelper('HasTimingRecords',
+    function(val) {
+    	if(val.id == undefined)
+    		return 0;
+
+    	if(Session.get("historyShown")  === 0)
+    		return 0;
+
+    	var count = TimingHistory.find({timingid:val.id}).fetch().length;
+    	console.log ("count = " + count)
+        return (count > 0 );
     }
 );
 

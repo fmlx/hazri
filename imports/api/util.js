@@ -5,13 +5,34 @@ import '/meteors.js';
 	
 if (Meteor.isServer) {
   // This code only runs on the server
+// debugger stmt wont work as its server side,. also dont use fetch() in find(), subscription wont get ready
   Meteor.publish('timingspub', function getTimingPub(userid, month, year) {
     return Timing.find({ userid: userid, month: month, year: year});
   });
+  
+  Meteor.publish('registeredusers', function a() {
+     return Meteor.users.find({ 'username' : { $ne : 'admin'}},{ username:1 });
+  });
+  
+  Meteor.publish('timinghistorypub', function a(timingid) {
+	  // get all records(history records) for this timingid
+     return TimingHistory.find({ timingid: timingid} , {sort : {"date":-1} } );
+  });
+}
+
+if (Meteor.isServer) {
+    Meteor.methods({
+        getServerTime: function () {
+            var _time = new Date();
+            console.log("Time   " + _time);
+            return _time;
+        }
+    });
 }
   
 Meteor.myFunctions = 
 {
+	// runs locally. works on the collection returned by server side methods 
 	getRegisteredUsers()
 	{
   	     return Meteor.users.find({ 'username' : { $ne : 'admin'}},{ username:1 }).fetch();
@@ -62,16 +83,17 @@ Meteor.myFunctions =
 Meteor.methods({	
 	saveTiming(userid, username, date, month, year, In, Out, hrsworkedms, hrsworked, Break, Remarks)
 	{
-	  Timing.insert({ userid: userid, username: username, 
+	  var tid = Timing.insert({ userid: userid, username: username, 
 				day: date, month: month, year:year, in: In, out:Out, hrsworkedms:hrsworkedms, hrsworked: hrsworked, breakTaken: Break, remarks:Remarks});
 
+	  var rec = Timing.find({ _id: tid });
+	  TimingHistory.insert({ timingid: tid, byuser: username, date: new Date(), in: In, out: Out, remarks: Remarks, breakTaken: Break});
 	},
-	updateTiming(recordid, date, month, year, In, Out, hrsworkedms, hrsworked, Break, Remarks)
+	updateTiming(recordid, username, date, month, year, In, Out, hrsworkedms, hrsworked, Break, Remarks)
 	{
-		debugger;
 		Timing.update(recordid, { // this.id is from getdaysinparticularmonth loop
 		    $set: {in: In, out: Out, hrsworkedms:hrsworkedms, hrsworked: hrsworked, breakTaken: Break, remarks:Remarks} });
-		
+		TimingHistory.insert({ timingid: recordid,  byuser:username, date: new Date(), in: In, out: Out, remarks: Remarks, breakTaken: Break});
 	}
 
 	 //}
