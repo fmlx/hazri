@@ -58,9 +58,11 @@ Template.body.onCreated(function helloOnCreated() {
    Tracker.autorun(() => {
 	 var d = new Date(self.selectedDate.get()); // whenever selectedDate changes run and get new months data
 	 const handle = Meteor.subscribe('timingspub', Session.get("currentUser"), d.getMonth() + 1, d.getFullYear());
-	 
+	 Meteor.subscribe('timingspub', Session.get("currentUser"), d.getMonth(), d.getFullYear()); // load prev month data also as we need it to find hrs worked in last week of last months
+
 		Tracker.autorun(() => {
 		  const isReady = handle.ready();
+		  // only fires listeners when dataready state is diff from current
 		  Session.set("dataready", isReady);// reqd to run getDaysInParticularMonth which updates UI
 		  console.log(`Handle is ${isReady ? 'ready' : 'not ready'}`);  
 		  console.log(Timing.find().count());
@@ -95,11 +97,30 @@ Template.calendarRow.onCreated(function helloOnCreated() {
 });
 
 Tracker.autorun(function(){
-  if(Meteor.userId()){
+  if(Meteor.userId() && Session.get("currentUser") == undefined){
 	 Session.set("currentUser", Meteor.userId()); // use sessions as ReactiveVar had issues in Tracker to call its set() method. It needs to know the template 
-    // this.currentUser = Meteor.userId();
+	    // this.currentUser = Meteor.userId();
   }
 });
+
+
+Tracker.autorun(function(){
+	if(Meteor.user()!= undefined)
+	 if(Meteor.user().username == 'admin')
+	 {
+		const handle1 = Meteor.subscribe('registeredusers');
+		Tracker.autorun(() => {
+		  if(handle1.ready())
+		  {
+			
+
+		    //Session.set("currentUser",result[0]._id);
+		//   return result;
+	      }
+		});	 
+	 }
+});
+
 
 function getDaysInPreviousMonth()
 {
@@ -296,7 +317,91 @@ function getTimeDiff(year, month, date, In, Out, brk, rem)
    return {hour:hh,min:mm};
  }
  
- 
+ function timeTo12HrFormat(time, isFormat)
+{   // Take a time in 24 hour format and format it in 12 hour format
+    var time_part_array = time.split(":");
+    var ampm = 'AM';
+
+    if (time_part_array[0] >= 12) {
+        ampm = 'PM';
+    }
+
+    if (time_part_array[0] > 12) {
+        time_part_array[0] = time_part_array[0] - 12;
+    }
+
+	var formatted = "";
+	if(isFormat)
+	{
+		if(time_part_array[0] < 10 && ampm == "AM")
+			formatted = "<span class='text-success'>" ;
+		else if(time_part_array[0] < 11 && ampm == "AM")
+			formatted = "<span class='text-secondary'>" ;
+		else if(time_part_array[0] < 12 && ampm == "AM")
+			formatted = "<span class='text-warning'>" ;
+		else
+			formatted = "<span class='text-danger'>" ;
+	}
+
+	formatted += time_part_array[0] + ':' + time_part_array[1] + ' ' + ampm;
+	
+	if(isFormat)
+		formatted +="</span>";
+	
+    return formatted;
+}
+
+ function getAverageTime(times, inout) {
+    var count = times.length
+	var valids = 0;
+    var timesInSeconds = 0;
+	var time;
+	
+    // loop through times
+    for (var i =0; i < count; i++) {
+        // parse
+		if(inout == "in")
+			time = times[i].timeIn;
+		else if (inout == "out")
+			time = times[i].timeOut;
+			
+		if(time == undefined || time =="")
+			continue;
+
+	    var time24hr = convertTo24Hour(time);
+		
+		valids ++;
+        var hrs = time24hr.hours;
+        var mins = time24hr.minutes;
+       // var secs = Number(ampm[0]);
+   //     ampm = ampm[1];
+        // convert to 24 hr format (military time)
+        //if (ampm == 'PM' && hrs!=12) hrs = hrs + 12;   
+        // find value in seconds of time
+        var totalSecs = hrs * 60 * 60;
+        totalSecs += mins * 60;
+       // totalSecs += secs;
+        // add to array
+        timesInSeconds += totalSecs;
+    }
+    // find average timesInSeconds
+	if(valids ==0)
+		return "";
+	
+    var total = 0;
+
+    var avg = Math.round(timesInSeconds / valids); // avg seconds since midnight
+	var avgTime = new Date(0,0,0,0,0,0); // initialize a date with any day but with time of midnight
+	avgTime.setSeconds(avg); // add seconds from midnight i.e 0th second of a day
+	
+	return timeTo12HrFormat(avgTime.toTimeString().split(' ')[0], inout == "in" ? true: false);
+}
+
+function formatTimeforUI()
+{
+	
+} 
+
 Template.body.helpers({
 	// var selectedDate = new Date();
     selectedMonth()
@@ -321,7 +426,8 @@ Template.body.helpers({
 	
 		 var month = array[0];
 		 var year = array[1];
-		 Session.get("dataready");
+		
+		Session.get("dataready");  // to make this method called
          // Since no month has fewer than 28 days
          var date = new Date(year, month-1, 1);
          //days = [];
@@ -342,18 +448,18 @@ Template.body.helpers({
 			//	function(error, result)
 			//	{
 			//		cursor = result;
-					//debugger;
 				
 				//});
 					 if(date.getDate() == 1 && date.getDay() != 1) // if first day of month is not monday then find hrsworked from previous month also
 					//	weeklyHoursms = Meteor.myFunctions.findPreviousMonthsHrsWorked( Session.get("currentUser"), new Date(date));
 					{
-							const handle = Meteor.subscribe('timingspub', Meteor.userId(), date.getMonth(), date.getFullYear()); // get data of prev month loaded
+							//const handle = Meteor.subscribe('timingspub', Meteor.userId(), date.getMonth(), date.getFullYear()); // get data of prev month loaded
 	 
-							Tracker.autorun(() => {
- 							    if(handle.ready())
+							//Tracker.autorun(() => {
+ 							//    if(handle.ready())
+
 									weeklyHoursms = Meteor.myFunctions.findPreviousMonthsHrsWorked(Session.get("currentUser"), new Date(date));
-							 });
+							// });
 					}
 					 
 					 let intime,outtime, timingid;
@@ -408,7 +514,8 @@ Template.body.helpers({
 	//	debugger;
 		
          var monthTime = getHoursMinsFromms(monthyHoursms);
-		 Session.set('monthHrs', monthTime );	
+		Session.set('monthHrs', monthTime );	
+		Session.set("days", days);
          return days;
     },
 	
@@ -425,16 +532,11 @@ Template.body.helpers({
 			 // return Meteor.users();
 		  // }
 		// });
-		const handle1 = Meteor.subscribe('registeredusers');
-		Tracker.autorun(() => {
-		  if(handle1.ready())
-		  {
-		   }
-		});	 
-			
-		  var result = Meteor.myFunctions.getRegisteredUsers();
-		    return result;
-		 
+		
+	   	var result = Meteor.myFunctions.getRegisteredUsers();
+		
+	   	Session.set("currentUser", result[0]._id);
+	    return result;
 	},
 	
 	getMonthHours()
@@ -447,6 +549,21 @@ Template.body.helpers({
     getHistoryOfTiming()
 	{
 		return TimingHistory.find().fetch();
+	},
+	
+	getAverageArrivalTime(param)
+	{
+	    var totalMS = 0;
+	    var valids = 0;
+  	 //   var d = new Date(Template.instance().selectedDate.get());
+		
+		var x = Session.get('days');
+		console.log(x);
+	    Session.get("dataready");  // to make this method called
+	
+	    var res = getAverageTime(days, param);
+		// return hours+ ":" +mins + " " + suffix;
+	    return res;
 	}
 });
 
@@ -462,7 +579,15 @@ Template.calendarRow.helpers({
 });
 
 Template.body.events({
- 
+ 	'click #reset'(event, instance) {
+ 		Meteor.call('resetPassword1',
+					function(error, result)
+					{
+					
+					});
+		   	
+		  
+    },
 	 'click #prev'(event, instance) {
 		   getDaysInPreviousMonth();
     },
@@ -475,7 +600,9 @@ Template.body.events({
 		
 		// get current username from his _id
 		var filename =  Meteor.myFunctions.getUserName( Session.get('currentUser') )[0].username + '-'+monthNames[d.getMonth()] + '.csv';
-		var fileData = "Day,Date,Time in,Time out,Break,WFH,Daily Hours,Weekly Hours \r\n";
+		var fileData;
+		fileData = Meteor.myFunctions.getUserName( Session.get('currentUser') )[0].username + '\r\n'+monthNames[d.getMonth()] + ' ' + d.getFullYear()+ '\r\n\r\n'; 
+		fileData+= "Day,Date,Time in,Time out,Break,WFH,Daily Hours,Weekly Hours \r\n";
 
 		var headers = {
 		  'Content-type': 'text/csv',
@@ -535,10 +662,10 @@ Template.calendarRow.events({
       var Break = event.target.Break.value;
       var Remarks = event.target.Remarks.value;
       var obj = instance.data;
- 	debugger;
+ 	
  	  $('#timeout'+ obj.index).attr("class","normalText");
 		  
-	  if (! Meteor.userId() || Meteor.user().username === 'admin')  {
+	  if (! Meteor.userId() )  {
          throw new Meteor.Error("Not authorized to change without valid user login");
       }
 		
@@ -555,12 +682,18 @@ Template.calendarRow.events({
 	  }
 	 
 	  var self = this;
+	  if(!Meteor.status().connected)
+	  {
+        sAlert.info('Cannot communicate with server', { position: 'top-right', timeout: '3000', onRouteClose: false, stack: false, offset: '180px'});
+    	return;
+      }
+
 	  Meteor.call("getServerTime", function (error, result) {
             Session.set("time", result);
-            debugger;
+            
             if(error)
             {
-                sAlert.info('Cannot communicate with server', { position: 'top-right', timeout: '2000', onRouteClose: false, stack: false, offset: '180px'});
+                sAlert.info('Error from server', { position: 'top-right', timeout: '2000', onRouteClose: false, stack: false, offset: '180px'});
             	return;
             }
 
@@ -573,14 +706,15 @@ Template.calendarRow.events({
 
          //   var timeDiff = Math.abs(result.getTime() - recDate.getTime());
 		//	var diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24)); 
+
 			if(diffDays< 0)
 			{
-				sAlert.info('You cannot predict future..', { position: 'top-right', timeout: '3000', onRouteClose: false, stack: false, offset: '220px'});
+				sAlert.info('You cannot predict future..', { position: 'top-right', timeout: '4000', onRouteClose: false, stack: false, offset: '220px'});
                 return;
 			}
-            if(diffDays > 5)
+            if(diffDays > 7 && Meteor.user().username != 'admin')
             {
-                sAlert.info('Not authorized to modify old records...', { position: 'top-right', timeout: '3000', onRouteClose: false, stack: false, offset: '220px'});
+                sAlert.info('Not authorized to modify old records...', { position: 'top-right', timeout: '4000', onRouteClose: false, stack: false, offset: '220px'});
                 return;
             }
             else
@@ -593,16 +727,26 @@ Template.calendarRow.events({
 					function(error, result)
 					{
 						if(!error)
-						   sAlert.info('Saved...', { position: 'top-right', timeout: '2000', onRouteClose: false, stack: false, offset: '180px'});
+						{
+						    sAlert.info('Saved...', { position: 'top-right', timeout: '2000', onRouteClose: false, stack: false, offset: '180px'});
+							Session.set("dataready", 1);// reqd to updates UI
+						}
+						else
+						   sAlert.info('Error updating record', { position: 'top-right', timeout: '2000', onRouteClose: false, stack: false, offset: '180px'});
 					});
 		   	  }
 			  else
 			  {
-			 	Meteor.call('saveTiming', Meteor.userId(), Meteor.user().username, self.date, self.month, self.year, In, Out, hrsworkedms, hrsworked, Break, Remarks,
+			 	Meteor.call('saveTiming', Session.get("currentUser"), Meteor.user().username, self.date, self.month, self.year, In, Out, hrsworkedms, hrsworked, Break, Remarks,
 		 			function(error, result)
 					{
 						if(!error)
-						   sAlert.info('Saved...', { position: 'top-right', timeout: '2000', onRouteClose: false, stack: false, offset: '180px'});
+						{
+							sAlert.info('Saved...', { position: 'top-right', timeout: '2000', onRouteClose: false, stack: false, offset: '180px'});
+							Session.set("dataready", 1);// reqd to updates UI
+						}					   
+						else
+						   sAlert.info('Error saving record', { position: 'top-right', timeout: '2000', onRouteClose: false, stack: false, offset: '180px'});
 					});
 
 			  }

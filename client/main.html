@@ -6,11 +6,11 @@
 	   if(inputField == null)
 	      return true;
 		  
-        var isValid = /^(0?[1-9]|1[012])(:[0-5]\d) [APap][mM]$/.test(inputField.value);
+        var isValid = /^(0?[1-9]|1[012])(:[0-5]\d) ?[APap][mM]$/.test(inputField.value);
         isValid |= /^([01]\d|2[0-3]):?([0-5]\d)$/.test(inputField.value);
 
         if (isValid) {
-            inputField.style.backgroundColor = '#bfa';
+          //  inputField.style.backgroundColor = '#bfa';
         } else {
             inputField.style.backgroundColor = '#fba';
             return false;
@@ -30,7 +30,7 @@
         isValid = parseInt( inputField.value);
 
         if (isValid) {
-            inputField.style.backgroundColor = '#bfa';
+           // inputField.style.backgroundColor = '#bfa';
         } else {
             inputField.style.backgroundColor = '#fba';
             return false;
@@ -67,8 +67,8 @@
         return isValid;
     }
 
-    function onkeyUp(e, elem) {
-    // this would test for whichever key is 40 and the ctrl key at the same time
+    function onkeyUp(e, elem, form) {
+    // on key 't'
 	    if (e.charCode == 116) {
 	        // call your function to do the thing
 	       e.preventDefault();
@@ -77,17 +77,27 @@
 	    }
 	}
 
+  	function focusout(e,form) {
+        debugger;
+	    
+	        // call your function to do the thing
+	       e.preventDefault();
+	      form.submit(this);
+	    
+	}
+	
+
 </SCRIPT>
 </head>
 
-<body>
+<body> 
  {{> sAlert}}
 
  <div class="container">
 <!-- {{>loginModal}} -->
 
 	<div class="clearfix">
-		<h3 class="text-center"  style="float: left; position: relative; top:0px; left: 0px;">Ghanta Department - Formulatrix</h3>
+		<h3 class="text-center"  style="float: left; position: relative; top:0px; left: 0px;">Attandance Sheet</h3>
 		<div style="float: right; position: relative; top: 10px; right: 12px;"> {{> loginButtons}} </div>
 	 </div>
 	  
@@ -107,12 +117,14 @@
 
     <p class="bg-success">
 		<h4> Updates </h4>
+		<div data-role="collapsible">
 		<ul style="background-color:#ffffe9;">
 			<li> Just type 't' in In or Out fields and current time will be filled automatically</li>
 			<li> In and Out now support 24hr format, for eg, '1730' will automatically convert into '05:30 pm'</li>
 			<li> Remarks and WFH support just a number also, for eg, '1' means 1 hour and it automatially converts it into '01:00'</li>
 			<li> WFH also accepts text input and time + text input, for e.g '1:45 wfh due to support issue' is valid</li>
 		</ul>
+		</div>
 	</p>
 
 <div class="clearfix">
@@ -121,8 +133,11 @@
   <button value="Previous" id="prev" class="btn btn-primary" style="float: right; position: relative; top: 10px; right: 12px;" >Previous</button>
  </div>
 
-<br>
-	
+  <!-- <a value="Reset" id="reset" style="float: right; position: relative; top: 15px; right: 12px;" >Reset</a> -->
+  <!-- triple braces used for showing html tags from template method -->
+
+<div>	Average In time: <h4 style=display:inline>{{{getAverageArrivalTime 'in'}}}</h4>  Average Out time: <h4 style=display:inline>{{getAverageArrivalTime 'out'}} </h4>
+</div>
 	<div class="table"> 
 		<h3 class="bg-success">
 		{{#if isAdmin currentUser}}
@@ -162,9 +177,9 @@
 	<div><span class="text">{{this.dayname}}</span> </div>
 	<div><span class="text"  style="float: left; position: relative; top:5px; left: -20px;">{{this.date}}-{{this.monthname}}</span> </div>
 
-	<div><input class="text" type="text"  name="In" placeholder="hh:mm am/pm" value="{{this.timeIn}}" onchange="validateHhMm12(this);" onkeypress="onkeyUp(event,this)">
+	<div><input class="text" type="text"  name="In" placeholder="hh:mm am/pm" value="{{this.timeIn}}" onchange="validateHhMm12(this);" onkeypress="onkeyUp(event,this)" onfocusout="focusout(event,this.form)">
 	</div>
-	<div><input type="text" name="Out" id="timeout{{index}}" placeholder="hh:mm am/pm" value="{{this.timeOut}}"  onchange="validateHhMm12(this);" onkeypress="onkeyUp(event,this)"/></div>
+	<div><input type="text" name="Out" id="timeout{{index}}" placeholder="hh:mm am/pm" value="{{this.timeOut}}"  onchange="validateHhMm12(this);" onkeypress="onkeyUp(event,this)" onfocusout="focusout(event,this.form)"/></div>
 	
 	<div><input type="text" name="Break" placeholder="hh:mm" value="{{this.breakTime}}"  onchange="validateHhMm(this);"/></div>
 	<div><input type="text" name="Remarks" placeholder="" value="{{this.remarks}}" onchange="validateWFH(this);"/></div>

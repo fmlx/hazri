@@ -3,8 +3,8 @@
 /* CSS declarations go here */
 body {
   font-family: sans-serif;
-  background-color: #315481;
-  background-image: linear-gradient(to bottom, #3F92FF, #84FFA5 100%);
+  background-color: #ffffff;
+ /* background-image: linear-gradient(to bottom, #3F92FF, #84FFA5 100%);*/
   background-attachment: fixed;
 
   position: absolute;
@@ -15,12 +15,11 @@ body {
 
   padding: 0;
   margin: 0;
-
   font-size: 14px;
 }
 
 .container {
-  max-width: 900px;
+  max-width: 80%;
   margin: 0 auto;
   min-height: 100%;
   background: white;
@@ -36,8 +35,6 @@ header {
 #login-buttons {
   display: block;
 }
-
-
 
 form {
   margin-top: 10px;
@@ -79,7 +76,7 @@ ul {
 li {
   position: relative;
   list-style: none;
-  padding: 15px;
+  padding: 5px;
   border-bottom: #eee solid 1px;
 }
 

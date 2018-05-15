@@ -1,4 +1,5 @@
 import '/meteors.js';
+import { Accounts } from 'meteor/accounts-base'
 
 // not compiling without MEteor.func syntax
 //Meteor.myFunctions  =  {
@@ -24,8 +25,12 @@ if (Meteor.isServer) {
     Meteor.methods({
         getServerTime: function () {
             var _time = new Date();
-            console.log("Time   " + _time);
             return _time;
+        },
+
+        resetPassword1: function()
+        {
+        	// Accounts.setPassword("WAXmiQJ5yEoyZ28pX", "hello");
         }
     });
 }
