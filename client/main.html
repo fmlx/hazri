@@ -97,7 +97,7 @@
 <!-- {{>loginModal}} -->
 
 	<div class="clearfix">
-		<h3 class="text-center"  style="float: left; position: relative; top:0px; left: 0px;">Attandance Sheet</h3>
+		<h3 class="text-center"  style="float: left; position: relative; top:0px; left: 0px;">Attendance Sheet</h3>
 		<div style="float: right; position: relative; top: 10px; right: 12px;"> {{> loginButtons}} </div>
 	 </div>
 	  
@@ -177,9 +177,9 @@
 	<div><span class="text">{{this.dayname}}</span> </div>
 	<div><span class="text"  style="float: left; position: relative; top:5px; left: -20px;">{{this.date}}-{{this.monthname}}</span> </div>
 
-	<div><input class="text" type="text"  name="In" placeholder="hh:mm am/pm" value="{{this.timeIn}}" onchange="validateHhMm12(this);" onkeypress="onkeyUp(event,this)" onfocusout="focusout(event,this.form)">
+	<div><input class="text" type="text"  name="In" placeholder="hh:mm am/pm" value="{{this.timeIn}}" onchange="validateHhMm12(this);" onkeypress="onkeyUp(event,this)">
 	</div>
-	<div><input type="text" name="Out" id="timeout{{index}}" placeholder="hh:mm am/pm" value="{{this.timeOut}}"  onchange="validateHhMm12(this);" onkeypress="onkeyUp(event,this)" onfocusout="focusout(event,this.form)"/></div>
+	<div><input type="text" name="Out" id="timeout{{index}}" placeholder="hh:mm am/pm" value="{{this.timeOut}}"  onchange="validateHhMm12(this);" onkeypress="onkeyUp(event,this)"/></div>
 	
 	<div><input type="text" name="Break" placeholder="hh:mm" value="{{this.breakTime}}"  onchange="validateHhMm(this);"/></div>
 	<div><input type="text" name="Remarks" placeholder="" value="{{this.remarks}}" onchange="validateWFH(this);"/></div>
